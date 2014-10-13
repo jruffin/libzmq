@@ -33,6 +33,7 @@
 
 #if defined ZMQ_HAVE_WINDOWS
 #include "windows.hpp"
+#include "winselect.hpp"
 #else
 #include <unistd.h>
 #endif
@@ -921,7 +922,7 @@ int zmq_poll (zmq_pollitem_t *items_, int nitems_, long timeout_)
             memcpy (&outset, &pollset_out, sizeof (fd_set));
             memcpy (&errset, &pollset_err, sizeof (fd_set));
 #if defined ZMQ_HAVE_WINDOWS
-            int rc = select (0, &inset, &outset, &errset, ptimeout);
+            int rc = winselect (0, &inset, &outset, &errset, ptimeout);
             if (unlikely (rc == SOCKET_ERROR)) {
                 errno = zmq::wsa_error_to_errno (WSAGetLastError ());
                 wsa_assert (errno == ENOTSOCK);

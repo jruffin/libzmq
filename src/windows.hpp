@@ -40,10 +40,24 @@
 #define _WIN32_WINNT 0x0501
 #endif
 #endif
+
+#ifdef _WIN32_WCE
+#define ZMQ_HAVE_WINCE
+#endif
+ 
+// Windows CE 4.2 and older have several huge problems:
+// - getsockopt does not work with SO_ERROR
+// - WSAIoctl(s_, SIO_KEEPALIVE_VALS) does not work
+#if (defined _WIN32_WCE) && (_WIN32_WCE < 0x500)
+#define ZMQ_HAVE_BROKEN_WINCE
+#endif
  
 #include <winsock2.h>
 #include <windows.h>
+
+#if !defined _WIN32_WCE
 #include <mswsock.h>
+#endif
 
 #if !defined __MINGW32__
 #include <Mstcpip.h>

@@ -286,6 +286,29 @@ int zmq::tcp_connecter_t::open ()
     return -1;
 }
 
+#ifdef ZMQ_HAVE_BROKEN_WINCE
+static int getWinsockConnectionError(zmq::fd_t& socket, int& error) {
+    // Emulates getsockopt with SO_ERROR *in the context of an
+    // asynchronous socket connection*. The socket given as argument
+    // has to be registered with a WSA event using WSAEventSelect(..., FD_CONNECT).
+    // This is done during socket creation in ip.cpp.
+
+    WSANETWORKEVENTS events = {0};
+    // We're really just interested in FD_CONNECT events here...
+    events.lNetworkEvents = FD_CONNECT;
+    int rc = WSAEnumNetworkEvents(socket, NULL, &events);
+
+    if (rc) {
+        error = 0;
+        return SOCKET_ERROR;
+    } else  {
+        // Take the event result for FD_CONNECT, which is what SO_ERROR would return
+        error = events.iErrorCode[FD_CONNECT_BIT];
+        return 0;
+    }
+}
+#endif
+
 zmq::fd_t zmq::tcp_connecter_t::connect ()
 {
     //  Async connect has finished. Check whether an error occurred
@@ -296,7 +319,13 @@ zmq::fd_t zmq::tcp_connecter_t::connect ()
     socklen_t len = sizeof err;
 #endif
 
+#ifdef ZMQ_HAVE_BROKEN_WINCE
+    // CE 4.2 and older do not support SO_ERROR, regardless
+    // of what the MSDN will tell you!
+    const int rc = getWinsockConnectionError(s, err);
+#else
     const int rc = getsockopt (s, SOL_SOCKET, SO_ERROR, (char*) &err, &len);
+#endif
 
     //  Assert if the error was caused by 0MQ bug.
     //  Networking problems are OK. No need to assert.

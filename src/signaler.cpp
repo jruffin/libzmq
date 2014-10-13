@@ -28,6 +28,7 @@
 #elif defined ZMQ_POLL_BASED_ON_SELECT
 #if defined ZMQ_HAVE_WINDOWS
 #include "windows.hpp"
+#include "winselect.hpp"
 #elif defined ZMQ_HAVE_HPUX
 #include <sys/param.h>
 #include <sys/types.h>
@@ -114,10 +115,16 @@ static int close_wait_ms (int fd_, unsigned int max_ms_ = 2000)
 zmq::signaler_t::signaler_t ()
 {
     //  Create the socketpair for signaling.
+#ifndef ZMQ_HAVE_WINCE
     if (make_fdpair (&r, &w) == 0) {
         unblock_socket (w);
         unblock_socket (r);
     }
+#else
+    internalEvent = WSACreateEvent();
+    InitializeCriticalSection(&cs);
+    r = (fd_t) this;
+#endif
 #ifdef HAVE_FORK
     pid = getpid ();
 #endif
@@ -128,6 +135,10 @@ zmq::signaler_t::~signaler_t ()
 #if defined ZMQ_HAVE_EVENTFD
     int rc = close_wait_ms (r);
     errno_assert (rc == 0);
+#elif defined ZMQ_HAVE_WINCE
+    r = 0;
+    DeleteCriticalSection(&cs);
+    WSACloseEvent(internalEvent);
 #elif defined ZMQ_HAVE_WINDOWS
     const struct linger so_linger = { 1, 0 };
     int rc = setsockopt (w, SOL_SOCKET, SO_LINGER,
@@ -162,6 +173,28 @@ void zmq::signaler_t::send ()
     const uint64_t inc = 1;
     ssize_t sz = write (w, &inc, sizeof (inc));
     errno_assert (sz == sizeof (inc));
+#elif defined ZMQ_HAVE_WINCE
+    EnterCriticalSection(&cs);
+
+    int priority = CeGetThreadPriority(GetCurrentThread());
+    CeSetThreadPriority(GetCurrentThread(), 247);
+
+    // Set the internal event
+    WSASetEvent(internalEvent);
+
+    // Trigger whoever is waiting.
+    std::set<fd_t>::iterator it;
+    for (it = waitingEvents.begin(); it != waitingEvents.end(); ++it) {
+        WSASetEvent((WSAEVENT) *it);
+    }
+
+    // Delete the entire event set to signal whoever reacted to WSASetEvent()
+    // that we are the one who triggered the event.
+    waitingEvents.clear();
+
+    CeSetThreadPriority(GetCurrentThread(), priority);
+
+    LeaveCriticalSection(&cs);
 #elif defined ZMQ_HAVE_WINDOWS
     unsigned char dummy = 0;
     int nbytes = ::send (w, (char*) &dummy, sizeof (dummy), 0);
@@ -236,10 +269,38 @@ int zmq::signaler_t::wait (int timeout_)
         timeout.tv_sec = timeout_ / 1000;
         timeout.tv_usec = timeout_ % 1000 * 1000;
     }
-#ifdef ZMQ_HAVE_WINDOWS
-    int rc = select (0, &fds, NULL, NULL,
+#ifdef ZMQ_HAVE_WINCE
+    int priority = 0;
+
+    if (timeout_ > 0) {
+        CeGetThreadPriority(GetCurrentThread());
+        CeSetThreadPriority(GetCurrentThread(), 247);
+    }
+
+    // Directly wait for the internal event. Less elegant than
+    // using winselect() but 40% faster latency-wise on the old
+    // CE4.2 platform used for testing.
+    DWORD ret = WSAWaitForMultipleEvents(1, &internalEvent, FALSE, timeout_, FALSE);
+
+    if (timeout_ > 0) {
+        if (ret == WSA_WAIT_EVENT_0) {
+            // Yield, because the thread that has signalled us is now inactive.
+            // We want to return to it!
+            Sleep(0);
+        }
+
+        CeSetThreadPriority(GetCurrentThread(), priority);
+    }
+
+    wsa_assert(ret != WSA_WAIT_FAILED);
+    int rc = 0; // Timeout
+    if (ret == WSA_WAIT_EVENT_0) {
+        rc = 1;
+    }
+#elif defined ZMQ_HAVE_WINDOWS
+    int rc = winselect (0, &fds, NULL, NULL,
         timeout_ >= 0 ? &timeout : NULL);
-    wsa_assert (rc != SOCKET_ERROR);
+    zmq_assert (rc != -1);
 #else
     int rc = select (r + 1, &fds, NULL, NULL,
         timeout_ >= 0 ? &timeout : NULL);
@@ -280,7 +341,12 @@ void zmq::signaler_t::recv ()
     zmq_assert (dummy == 1);
 #else
     unsigned char dummy;
-#if defined ZMQ_HAVE_WINDOWS
+#if defined ZMQ_HAVE_WINCE
+    int nbytes = sizeof(dummy);
+    dummy = 0;
+    BOOL resetOk = WSAResetEvent(internalEvent);
+    zmq_assert(resetOk);
+#elif defined ZMQ_HAVE_WINDOWS
     int nbytes = ::recv (r, (char*) &dummy, sizeof (dummy), 0);
     wsa_assert (nbytes != SOCKET_ERROR);
 #else
@@ -553,3 +619,38 @@ int zmq::signaler_t::make_fdpair (fd_t *r_, fd_t *w_)
     }
 #endif
 }
+
+#ifdef ZMQ_HAVE_WINCE
+void zmq::signaler_t::addWaitingEvent(fd_t e) {
+    EnterCriticalSection(&cs);
+
+    // Now here's a tricky one: if the internal event is already set,
+    // no need to get into the list. Just set the event right away, because
+    // we have what we want!
+    if(WSAWaitForMultipleEvents(1, &internalEvent, FALSE, 0, FALSE) == WSA_WAIT_EVENT_0) {
+        WSASetEvent((WSAEVENT) e);
+    } else {
+        // Put the event into the set.
+        waitingEvents.insert(e);
+    }
+
+    LeaveCriticalSection(&cs);
+}
+
+bool zmq::signaler_t::removeWaitingEvent(fd_t e) {
+
+    EnterCriticalSection(&cs);
+    bool eventWasInList = false;
+    if (waitingEvents.find(e) != waitingEvents.end()) {
+        // The event was still in the set, so it
+        // has not been triggered yet. This is
+        // useful information for winselect().
+        waitingEvents.erase(e);
+        eventWasInList = true;
+    }
+    LeaveCriticalSection(&cs);
+
+    return eventWasInList;
+}
+#endif
+

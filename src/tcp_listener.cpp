@@ -205,8 +205,13 @@ int zmq::tcp_listener_t::set_address (const char *addr_)
     //  Allow reusing of the address.
     int flag = 1;
 #ifdef ZMQ_HAVE_WINDOWS
+#ifdef _WIN32_WCE
+    rc = setsockopt (s, SOL_SOCKET, SO_REUSEADDR,
+        (const char*) &flag, sizeof (int));
+#else
     rc = setsockopt (s, SOL_SOCKET, SO_EXCLUSIVEADDRUSE,
         (const char*) &flag, sizeof (int));
+#endif
     wsa_assert (rc != SOCKET_ERROR);
 #else
     rc = setsockopt (s, SOL_SOCKET, SO_REUSEADDR, &flag, sizeof (int));

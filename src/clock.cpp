@@ -62,18 +62,26 @@ ULONGLONG compatible_get_tick_count64()
   return result;
 }
 
+#ifdef _WIN32_WCE
+#define GET_PROC_ADDRESS GetProcAddressA
+#else
+#define GET_PROC_ADDRESS GetProcAddress
+#endif
+
 f_compatible_get_tick_count64 init_compatible_get_tick_count64()
 {
   f_compatible_get_tick_count64 func = NULL;
-  HMODULE module = ::LoadLibraryA("Kernel32.dll");
+  HMODULE module = ::LoadLibrary(TEXT("Kernel32.dll"));
   if (module != NULL)
-    func = reinterpret_cast<f_compatible_get_tick_count64>(::GetProcAddress(module, "GetTickCount64"));
+    func = reinterpret_cast<f_compatible_get_tick_count64>(::GET_PROC_ADDRESS(module, "GetTickCount64"));
 
   if (func == NULL)
     func = compatible_get_tick_count64;
 
   return func;
 }
+
+#undef GET_PROC_ADDRESS
 
 static f_compatible_get_tick_count64 my_get_tick_count64 = init_compatible_get_tick_count64();
 #endif

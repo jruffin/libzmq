@@ -26,6 +26,10 @@
 
 #include "fd.hpp"
 
+#ifdef ZMQ_HAVE_WINCE
+#include <set>
+#endif
+
 namespace zmq
 {
 
@@ -52,7 +56,22 @@ namespace zmq
         void forked ();
 #endif
 
+#ifdef ZMQ_HAVE_WINCE
+        void addWaitingEvent(fd_t e);
+        // Returns true if the event was still in the list,
+        // i.e. it has not been triggered yet.
+        bool removeWaitingEvent(fd_t e);
+#endif
+
     private:
+
+#ifdef ZMQ_HAVE_WINCE
+        // The internal reference event
+        WSAEVENT internalEvent;
+        // The events that have to be signalled
+        std::set<fd_t> waitingEvents;
+        CRITICAL_SECTION cs;
+#endif
 
         //  Creates a pair of filedescriptors that will be used
         //  to pass the signals.

@@ -36,6 +36,10 @@
 #include <ioctl.h>
 #endif
 
+#ifdef ZMQ_HAVE_BROKEN_WINCE
+static WSAEVENT connectEvent = WSACreateEvent();
+#endif
+
 zmq::fd_t zmq::open_socket (int domain_, int type_, int protocol_)
 {
     //  Setting this option result in sane behaviour when exec() functions
@@ -45,9 +49,12 @@ zmq::fd_t zmq::open_socket (int domain_, int type_, int protocol_)
 #endif
 
     fd_t s = socket (domain_, type_, protocol_);
-#ifdef ZMQ_HAVE_WINDOWS
+#ifdef ZMQ_HAVE_BROKEN_WINCE
     if (s == INVALID_SOCKET)
         return INVALID_SOCKET;
+
+    int rc = WSAEventSelect(s, connectEvent, FD_CONNECT);
+    wsa_assert(rc != SOCKET_ERROR);
 #else
     if (s == -1)
         return -1;

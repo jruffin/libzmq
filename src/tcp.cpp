@@ -95,6 +95,12 @@ void zmq::tune_tcp_keepalives (fd_t s_, int keepalive_, int keepalive_cnt_, int 
     //  Tuning TCP keep-alives if platform allows it
     //  All values = -1 means skip and leave it for OS
 #ifdef ZMQ_HAVE_WINDOWS
+#ifdef ZMQ_HAVE_BROKEN_WINCE
+    if (keepalive_ != -1) {
+        int rc = setsockopt (s_, SOL_SOCKET, SO_KEEPALIVE, (char*) &keepalive_, sizeof (int));
+        errno_assert (rc == 0);
+    }
+#else
     if (keepalive_ != -1) {
         tcp_keepalive keepalive_opts;
         keepalive_opts.onoff = keepalive_;
@@ -104,7 +110,9 @@ void zmq::tune_tcp_keepalives (fd_t s_, int keepalive_, int keepalive_cnt_, int 
         int rc = WSAIoctl(s_, SIO_KEEPALIVE_VALS, &keepalive_opts, sizeof(keepalive_opts), NULL, 0, &num_bytes_returned, NULL, NULL);
         wsa_assert (rc != SOCKET_ERROR);
     }
-#else
+#endif // ZMQ_HAVE_BROKEN_WINCE
+#endif // ZMQ_HAVE_WINDOWS
+
 #ifdef ZMQ_HAVE_SO_KEEPALIVE
     if (keepalive_ != -1) {
         int rc = setsockopt (s_, SOL_SOCKET, SO_KEEPALIVE, (char*) &keepalive_, sizeof (int));
@@ -139,7 +147,6 @@ void zmq::tune_tcp_keepalives (fd_t s_, int keepalive_, int keepalive_cnt_, int 
 #endif // ZMQ_HAVE_TCP_KEEPINTVL
     }
 #endif // ZMQ_HAVE_SO_KEEPALIVE
-#endif // ZMQ_HAVE_WINDOWS
 }
 
 int zmq::tcp_write (fd_t s_, const void *data_, size_t size_)

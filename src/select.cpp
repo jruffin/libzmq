@@ -23,6 +23,7 @@
 #include "platform.hpp"
 #if defined ZMQ_HAVE_WINDOWS
 #include "windows.hpp"
+#include "winselect.hpp"
 #elif defined ZMQ_HAVE_HPUX
 #include <sys/param.h>
 #include <sys/types.h>
@@ -170,7 +171,7 @@ void zmq::select_t::loop ()
             (long) (timeout % 1000 * 1000)};
 #endif
 #ifdef ZMQ_HAVE_WINDOWS
-        int rc = select (0, &readfds, &writefds, &exceptfds,
+        int rc = winselect (0, &readfds, &writefds, &exceptfds,
             timeout ? &tv : NULL);
         wsa_assert (rc != SOCKET_ERROR);
 #else
