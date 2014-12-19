@@ -17,10 +17,17 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include "platform.hpp"
+
+#ifdef ZMQ_HAVE_WINDOWS
+#include "windows.hpp"
+#endif
+
+#ifndef ZMQ_HAVE_WINCE
 #include <sys/types.h>
+#endif
 
 #include "err.hpp"
-#include "platform.hpp"
 #include "socks.hpp"
 #include "tcp.hpp"
 

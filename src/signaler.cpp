@@ -176,9 +176,6 @@ void zmq::signaler_t::send ()
 #elif defined ZMQ_HAVE_WINCE
     EnterCriticalSection(&cs);
 
-    int priority = CeGetThreadPriority(GetCurrentThread());
-    CeSetThreadPriority(GetCurrentThread(), 247);
-
     // Set the internal event
     WSASetEvent(internalEvent);
 
@@ -191,8 +188,6 @@ void zmq::signaler_t::send ()
     // Delete the entire event set to signal whoever reacted to WSASetEvent()
     // that we are the one who triggered the event.
     waitingEvents.clear();
-
-    CeSetThreadPriority(GetCurrentThread(), priority);
 
     LeaveCriticalSection(&cs);
 #elif defined ZMQ_HAVE_WINDOWS
@@ -270,27 +265,11 @@ int zmq::signaler_t::wait (int timeout_)
         timeout.tv_usec = timeout_ % 1000 * 1000;
     }
 #ifdef ZMQ_HAVE_WINCE
-    int priority = 0;
-
-    if (timeout_ > 0) {
-        CeGetThreadPriority(GetCurrentThread());
-        CeSetThreadPriority(GetCurrentThread(), 247);
-    }
 
     // Directly wait for the internal event. Less elegant than
     // using winselect() but 40% faster latency-wise on the old
     // CE4.2 platform used for testing.
     DWORD ret = WSAWaitForMultipleEvents(1, &internalEvent, FALSE, timeout_, FALSE);
-
-    if (timeout_ > 0) {
-        if (ret == WSA_WAIT_EVENT_0) {
-            // Yield, because the thread that has signalled us is now inactive.
-            // We want to return to it!
-            Sleep(0);
-        }
-
-        CeSetThreadPriority(GetCurrentThread(), priority);
-    }
 
     wsa_assert(ret != WSA_WAIT_FAILED);
     int rc = 0; // Timeout
@@ -430,16 +409,16 @@ int zmq::signaler_t::make_fdpair (fd_t *r_, fd_t *w_)
 #       ifdef __MINGW32__
         _snwprintf (mutex_name, MAX_PATH, L"Global\\zmq-signaler-port-%d", signaler_port);
 #       else
-        swprintf (mutex_name, MAX_PATH, L"Global\\zmq-signaler-port-%d", signaler_port);
+        _snwprintf (mutex_name, MAX_PATH, L"Global\\zmq-signaler-port-%d", signaler_port);
 #       endif
 
 #       if !defined _WIN32_WCE
         sync = CreateMutexW (&sa, FALSE, mutex_name);
+        if (sync == NULL && GetLastError () == ERROR_ACCESS_DENIED)
+            sync = OpenMutexW (SYNCHRONIZE, FALSE, mutex_name);
 #       else
         sync = CreateMutexW (NULL, FALSE, mutex_name);
 #       endif
-        if (sync == NULL && GetLastError () == ERROR_ACCESS_DENIED)
-            sync = OpenMutexW (SYNCHRONIZE, FALSE, mutex_name);
 
         win_assert (sync != NULL);
     }

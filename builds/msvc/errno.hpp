@@ -16,7 +16,7 @@
 #define EACCES          13
 #define EFAULT          14
 //#define EOSERR          15 // rk
-//#define EBUSY           16
+#define EBUSY           16
 //#define EEXIST          17
 //#define EXDEV           18
 //#define ENODEV          19

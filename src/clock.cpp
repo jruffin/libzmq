@@ -17,8 +17,12 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "clock.hpp"
 #include "platform.hpp"
+#ifdef ZMQ_HAVE_WINDOWS
+#include "windows.hpp"
+#endif
+
+#include "clock.hpp"
 #include "likely.hpp"
 #include "config.hpp"
 #include "err.hpp"

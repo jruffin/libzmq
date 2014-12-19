@@ -17,10 +17,6 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <new>
-#include <string>
-#include <algorithm>
-
 #include "platform.hpp"
 
 #if defined ZMQ_HAVE_WINDOWS
@@ -35,6 +31,10 @@
 #else
 #include <unistd.h>
 #endif
+
+#include <new>
+#include <string>
+#include <algorithm>
 
 #include "socket_base.hpp"
 #include "tcp_listener.hpp"
