@@ -10,6 +10,51 @@
 #define FD_TRIGGERED 0x10000
 #define FD_SIGNALER  0x20000
 
+#ifdef ZMQ_HAVE_WINCE
+struct sockInfo_t
+{
+    SOCKET s;
+    long events;
+};
+
+static sockInfo_t& sockInfo(sockInfo_t* sockets, SOCKET& s, size_t& socketCount, size_t arraySize)
+{
+    // Dummy default structure returned when no index could be
+    // allocated or found
+    static sockInfo_t dummy = {0};
+
+    size_t idx = -1;
+
+    size_t i = 0;
+    for (; i < socketCount; ++i) {
+        if (sockets[i].s == s) {
+            // Existing index found, that's it, our job's done.
+            idx = i;
+            break;
+        }
+    }
+
+    if ( i == socketCount && (socketCount < arraySize) )
+    {
+        // No index found and there still are some free:
+        // allocate a new one!
+        idx = socketCount++;
+        sockets[idx].s = s;
+    }
+    // else: no index found but there are none left free.
+    // fail with -1.
+
+    if (idx >= 0) {
+        return sockets[idx];
+    } else {
+        // XXX this means some sockets might be ignored
+        // in some circumstances if the sockets array
+        // is smaller than 3*FD_SETSIZE...
+        return dummy;
+    }
+}
+#endif
+
 int winselect (
         int nfds,
         fd_set* readfds,
@@ -19,50 +64,46 @@ int winselect (
     )
 {
 #ifdef ZMQ_HAVE_WINCE
-    WSAEVENT eventsToWaitFor[1] = {0};
-    size_t eventCount = 1;
+    WSAEVENT eventToWaitFor = WSACreateEvent();
     zmq::signaler_t* signalers[FD_SETSIZE];
     size_t signalerCount = 0;
 
-    // SOCKETS EVENT
-    eventsToWaitFor[0] = WSACreateEvent();
-
-    std::map<SOCKET, long> sockEvents;
+    sockInfo_t sockets[FD_SETSIZE] = {0};
+    size_t socketCount = 0;
 
     size_t i;
     if (readfds) {
         for (i=0; i < readfds->fd_count; ++i) {
             SOCKET sock = readfds->fd_array[i];
-            sockEvents[sock] |= FD_READ | FD_CLOSE | FD_ACCEPT;
+            sockInfo(sockets, sock, socketCount, FD_SETSIZE).events |= FD_READ | FD_CLOSE | FD_ACCEPT;
         }
     }
 
     if (writefds) {
         for (i=0; i < writefds->fd_count; ++i) {
             SOCKET sock = writefds->fd_array[i];
-            sockEvents[sock] |= FD_WRITE | FD_CONNECT;
+            sockInfo(sockets, sock, socketCount, FD_SETSIZE).events |= FD_WRITE | FD_CONNECT;
         }
     }
 
     if (exceptfds) {
         for (i=0; i < exceptfds->fd_count; ++i) {
             SOCKET sock = exceptfds->fd_array[i];
-            sockEvents[sock] |= FD_OOB | FD_FAILED_CONNECT;
+            sockInfo(sockets, sock, socketCount, FD_SETSIZE).events |= FD_OOB | FD_FAILED_CONNECT;
         }
     }
 
-    std::map<SOCKET, long>::iterator it;
-    for (it = sockEvents.begin(); it != sockEvents.end(); ++it) {
+    for (i = 0; i < socketCount; ++i) {
         // Assume that the entry is a socket. Try associating it to the event
-        int rc = WSAEventSelect(it->first, eventsToWaitFor[0], it->second);
+        int rc = WSAEventSelect(sockets[i].s, eventToWaitFor, sockets[i].events);
         if (rc == SOCKET_ERROR) {
             DWORD err = WSAGetLastError();
             if (err == WSAENOTSOCK) {
                 // This is not a socket! Assume it is a signaler, so
                 // add ourselves to the list of people who'd like to get
                 // a heads-up when it wakes up
-                zmq::signaler_t* signaler = (zmq::signaler_t*) it->first;
-                signaler->addWaitingEvent((zmq::fd_t) eventsToWaitFor[0]);
+                zmq::signaler_t* signaler = (zmq::signaler_t*) sockets[i].s;
+                signaler->addWaitingEvent((zmq::fd_t) eventToWaitFor);
                 signalers[signalerCount++] = signaler;
                 zmq_assert(signalerCount <= FD_SETSIZE);
             } else {
@@ -77,40 +118,9 @@ int winselect (
         timeoutMs = (timeout->tv_sec*1000) + (timeout->tv_usec/1000);
     }
 
-    // If the timeout is zero, there is no real waiting and no
-    // context switch, only checking whether the event flags are set.
-    // In this case, no need for yielding, so no need to shuffle
-    // the priorities.
-    int priority = 0;
-    if (timeoutMs > 0) {
-        priority = CeGetThreadPriority(GetCurrentThread());
-        CeSetThreadPriority(GetCurrentThread(), 247);
-    }
-
     // Wait for any of the events...
-    DWORD ret = WSAWaitForMultipleEvents(eventCount,
-            eventsToWaitFor, FALSE, timeoutMs, FALSE);
-
-    // If the timeout is larger than zero, we are waiting and
-    // there is a context switch involved. Should we return
-    // with WSA_WAIT_EVENT_0 or so, somebody triggered our event
-    // and got its execution time stolen by us as a consequence.
-    // We want to yield back to the caller, which can be done with
-    // Sleep(0) as long as the caller has the same priority as us.
-    // This is why we set it to 247 earlier - the signaler_t class
-    // sets its thread priority to 247 prior to setting the events,
-    // so we have a fair guarantee to yield to our signaler with
-    // Sleep(0) - though we might yield to another signaler like this,
-    // which is not all that bad.
-    if (timeoutMs > 0) {
-        if (ret >= WSA_WAIT_EVENT_0 && ret < WSA_WAIT_EVENT_0 + eventCount) {
-            // Yield, because the thread that has signalled us is now inactive.
-            // We want to return to it!
-            Sleep(0);
-        }
-
-        CeSetThreadPriority(GetCurrentThread(), priority);
-    }
+    DWORD ret = WSAWaitForMultipleEvents(1,
+            &eventToWaitFor, FALSE, timeoutMs, FALSE);
 
     DWORD err = WSAGetLastError();
 
@@ -120,9 +130,10 @@ int winselect (
         // of the signaler. That's a sign that this is not the one that triggered us.
         // If the method returns false the exact opposite is true:
         // the signaler in signalers[] that does NOT have us in its list anymore has triggered us!
-        bool signalerDidNotTrigger = signalers[i]->removeWaitingEvent((zmq::fd_t) eventsToWaitFor[0]);
+        bool signalerDidNotTrigger = signalers[i]->removeWaitingEvent((zmq::fd_t) eventToWaitFor);
 
-        long& flags = sockEvents[(zmq::fd_t) signalers[i]];
+        SOCKET s = (zmq::fd_t) signalers[i];
+        long& flags = sockInfo(sockets, s, socketCount, FD_SETSIZE).events |= FD_OOB | FD_FAILED_CONNECT;
 
         // Mark the FD as a signaler, useful later.
         flags |= FD_SIGNALER;
@@ -133,7 +144,7 @@ int winselect (
         }
     }
 
-    if (ret >= WSA_WAIT_EVENT_0 && ret < WSA_WAIT_EVENT_0 + eventCount) {
+    if (ret == WSA_WAIT_EVENT_0) {
 
         size_t newReadFdCount = 0;
         size_t newWriteFdCount = 0;
@@ -143,12 +154,11 @@ int winselect (
         // OK! We need to determine which FDs have been triggered, and modify the
         // fd_sets accordingly so they only contain those.
 
-        std::map<SOCKET, long>::iterator it;
-        for (it = sockEvents.begin(); it != sockEvents.end(); ++it) {
+        for (i = 0; i < socketCount; ++i) {
 
             // Did anything happen to this socket?
-            zmq::fd_t fd = (zmq::fd_t) it->first;
-            long flags = it->second;
+            zmq::fd_t fd = (zmq::fd_t) sockets[i].s;
+            long flags = sockets[i].events;
             bool hasBeenTriggered = false;
 
             if (flags & FD_SIGNALER) {
@@ -160,7 +170,7 @@ int winselect (
             } else {
                 // The FD is a socket, ask whether anything interesting happened to it
                 WSANETWORKEVENTS events;
-                int rc = WSAEnumNetworkEvents(it->first, NULL, &events);
+                int rc = WSAEnumNetworkEvents(sockets[i].s, NULL, &events);
 
                 if (rc == 0) {
                     if (events.lNetworkEvents != 0) {
@@ -200,19 +210,19 @@ int winselect (
             exceptfds->fd_count = newExceptFdCount;
         }
 
-        WSACloseEvent(eventsToWaitFor[0]);
+        WSACloseEvent(eventToWaitFor);
         WSASetLastError(err);
 
         return triggeredFdCount;
 
     } else if (ret == WSA_WAIT_TIMEOUT) {
         // Timeout.
-        WSACloseEvent(eventsToWaitFor[0]);
+        WSACloseEvent(eventToWaitFor);
         WSASetLastError(err);
         return 0;
     } else {
         // Error.
-        WSACloseEvent(eventsToWaitFor[0]);
+        WSACloseEvent(eventToWaitFor);
         WSASetLastError(err);
         return SOCKET_ERROR;
     }
