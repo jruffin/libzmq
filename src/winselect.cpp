@@ -1,6 +1,5 @@
 #include "winselect.hpp"
 #include "err.hpp"
-#include <map>
 #include "signaler.hpp"
 
 // From the CE5 sources, wsock.h
