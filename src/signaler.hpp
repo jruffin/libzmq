@@ -61,6 +61,7 @@ namespace zmq
         // Returns true if the event was still in the list,
         // i.e. it has not been triggered yet.
         bool removeWaitingEvent(fd_t e);
+        WSAEVENT getInternalEvent();
 #endif
 
     private:

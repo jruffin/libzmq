@@ -5,9 +5,12 @@
 // From the CE5 sources, wsock.h
 #define FD_FAILED_CONNECT   0x0100
 
-// Made-up "triggered" flag we use internally
-#define FD_TRIGGERED 0x10000
-#define FD_SIGNALER  0x20000
+// Set when the "socket" is actually a signaller and it has been triggered
+#define FD_TRIGGERED        0x10000 
+// Set when the "socket" is actually a signaller and we're waiting on its internal event
+#define FD_SIGNALER_EVENT   0x20000 
+// Set when the "socket" is actually a signaller and we're registered with it
+#define FD_SIGNALER_LIST    0x40000
 
 #ifdef ZMQ_HAVE_WINCE
 struct sockInfo_t
@@ -63,7 +66,19 @@ int winselect (
     )
 {
 #ifdef ZMQ_HAVE_WINCE
-    WSAEVENT eventToWaitFor = WSACreateEvent();
+    // We use as many events as we can legally wait for
+    WSAEVENT eventsToWaitFor[MAXIMUM_WAIT_OBJECTS];
+    // The first event is the one we bind all sockets to,
+    // and the one we give to signallers we cannot
+    // directly wait for
+    eventsToWaitFor[0] = WSACreateEvent();
+    size_t eventCount = 1;
+
+    // Any signaller above the event count limit
+    // gets treated differently. Instead of taking
+    // its internal event, we register our first event
+    // with the signaller so that it can trigger us
+    // whenever it gets set.
     zmq::signaler_t* signalers[FD_SETSIZE];
     size_t signalerCount = 0;
 
@@ -94,17 +109,32 @@ int winselect (
 
     for (i = 0; i < socketCount; ++i) {
         // Assume that the entry is a socket. Try associating it to the event
-        int rc = WSAEventSelect(sockets[i].s, eventToWaitFor, sockets[i].events);
+        int rc = WSAEventSelect(sockets[i].s, eventsToWaitFor[0], sockets[i].events);
         if (rc == SOCKET_ERROR) {
             DWORD err = WSAGetLastError();
             if (err == WSAENOTSOCK) {
-                // This is not a socket! Assume it is a signaler, so
-                // add ourselves to the list of people who'd like to get
-                // a heads-up when it wakes up
+                // This is not a socket! Assume it is a signaler.
+                // What we do next heavily depends on whether we still have
+                // a free event slot to wait on...
                 zmq::signaler_t* signaler = (zmq::signaler_t*) sockets[i].s;
-                signaler->addWaitingEvent((zmq::fd_t) eventToWaitFor);
-                signalers[signalerCount++] = signaler;
-                zmq_assert(signalerCount <= FD_SETSIZE);
+
+                if (eventCount < MAXIMUM_WAIT_OBJECTS) {
+                    // Okay, we do. In this case we wait on the signaller's
+                    // internal event directly.
+                    eventsToWaitFor[eventCount++] = signaler->getInternalEvent();
+                    // Also note we are using this technique as a flag, it's important later
+                    sockets[i].events |= FD_SIGNALER_EVENT;
+                } else {
+                    // No free event slot, we have to use the indirect way.
+                    // Tell the signaller to add ourselves to the list of
+                    // people who'd like to get  a heads-up when it wakes up.
+                    signaler->addWaitingEvent((zmq::fd_t) eventsToWaitFor[0]);
+                    signalers[signalerCount++] = signaler;
+                    zmq_assert(signalerCount <= FD_SETSIZE);
+
+                    // Also note we are using this technique as a flag, it's important later
+                    sockets[i].events |= FD_SIGNALER_LIST;
+                }
             } else {
                 // Some other type of error that should definitely not happen.
                 wsa_assert_no(err);
@@ -118,24 +148,21 @@ int winselect (
     }
 
     // Wait for any of the events...
-    DWORD ret = WSAWaitForMultipleEvents(1,
-            &eventToWaitFor, FALSE, timeoutMs, FALSE);
+    DWORD ret = WSAWaitForMultipleEvents(eventCount,
+            &eventsToWaitFor[0], FALSE, timeoutMs, FALSE);
 
     DWORD err = WSAGetLastError();
 
-    // Deregister ourselves from the signalers
+    // Deregister ourselves from the signalers we are registered with
     for (i=0; i < signalerCount; ++i) {
         // If the method returns true, we were still in the event list
         // of the signaler. That's a sign that this is not the one that triggered us.
         // If the method returns false the exact opposite is true:
         // the signaler in signalers[] that does NOT have us in its list anymore has triggered us!
-        bool signalerDidNotTrigger = signalers[i]->removeWaitingEvent((zmq::fd_t) eventToWaitFor);
+        bool signalerDidNotTrigger = signalers[i]->removeWaitingEvent((zmq::fd_t) eventsToWaitFor[0]);
 
         SOCKET s = (zmq::fd_t) signalers[i];
         long& flags = sockInfo(sockets, s, socketCount, FD_SETSIZE).events |= FD_OOB | FD_FAILED_CONNECT;
-
-        // Mark the FD as a signaler, useful later.
-        flags |= FD_SIGNALER;
 
         if (!signalerDidNotTrigger) {
             // This signaler triggered us, note this down in the FD flags.
@@ -143,7 +170,7 @@ int winselect (
         }
     }
 
-    if (ret == WSA_WAIT_EVENT_0) {
+    if ( ret >= WSA_WAIT_EVENT_0 && ret < (WSA_WAIT_EVENT_0 + eventCount) ) {
 
         size_t newReadFdCount = 0;
         size_t newWriteFdCount = 0;
@@ -160,10 +187,18 @@ int winselect (
             long flags = sockets[i].events;
             bool hasBeenTriggered = false;
 
-            if (flags & FD_SIGNALER) {
-                // The FD is a signaler...
+            if (flags & FD_SIGNALER_LIST) {
+                // The FD is a signaler we are registered with.
                 if (flags & FD_TRIGGERED) {
                     // ... and it has been triggered!
+                    hasBeenTriggered = true;
+                }
+            } else if (flags & FD_SIGNALER_EVENT) {
+                // The FD is a signaler whose internal event we used.
+                // We must directly ask the event object whether it is currently set.
+                zmq::signaler_t* signaler = (zmq::signaler_t*) sockets[i].s;
+                if (WaitForSingleObject(signaler->getInternalEvent(), 0) == WAIT_OBJECT_0) {
+                    // Yes, the event is set! The event is triggered!
                     hasBeenTriggered = true;
                 }
             } else {
@@ -209,19 +244,19 @@ int winselect (
             exceptfds->fd_count = newExceptFdCount;
         }
 
-        WSACloseEvent(eventToWaitFor);
+        WSACloseEvent(eventsToWaitFor[0]);
         WSASetLastError(err);
 
         return triggeredFdCount;
 
     } else if (ret == WSA_WAIT_TIMEOUT) {
         // Timeout.
-        WSACloseEvent(eventToWaitFor);
+        WSACloseEvent(eventsToWaitFor[0]);
         WSASetLastError(err);
         return 0;
     } else {
         // Error.
-        WSACloseEvent(eventToWaitFor);
+        WSACloseEvent(eventsToWaitFor[0]);
         WSASetLastError(err);
         return SOCKET_ERROR;
     }

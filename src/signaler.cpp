@@ -631,5 +631,9 @@ bool zmq::signaler_t::removeWaitingEvent(fd_t e) {
 
     return eventWasInList;
 }
+
+WSAEVENT zmq::signaler_t::getInternalEvent() {
+    return internalEvent;
+}
 #endif
 
