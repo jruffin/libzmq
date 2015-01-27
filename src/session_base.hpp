@@ -1,5 +1,5 @@
 /*
-    Copyright (c) 2007-2014 Contributors as noted in the AUTHORS file
+    Copyright (c) 2007-2015 Contributors as noted in the AUTHORS file
 
     This file is part of 0MQ.
 
@@ -69,6 +69,7 @@ namespace zmq
         int push_msg (msg_t *msg_);
 
         int zap_connect ();
+        bool zap_enabled ();
 
         //  Fetches a message. Returns 0 if successful; -1 otherwise.
         //  The caller is responsible for freeing the message when no

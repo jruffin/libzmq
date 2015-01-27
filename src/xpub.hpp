@@ -1,5 +1,5 @@
 /*
-    Copyright (c) 2007-2014 Contributors as noted in the AUTHORS file
+    Copyright (c) 2007-2015 Contributors as noted in the AUTHORS file
 
     This file is part of 0MQ.
 
@@ -81,6 +81,15 @@ namespace zmq
 
         //  Drop messages if HWM reached, otherwise return with EAGAIN
         bool lossy;
+
+		//  Subscriptions will not bed added automatically, only after calling set option with ZMQ_SUBSCRIBE or ZMQ_UNSUBSCRIBE
+		bool manual;
+
+		//  Last pipe send subscription message, only used if xpub is on manual
+		pipe_t *last_pipe;
+
+		//  Welcome message to send to pipe when attached
+		msg_t welcome_msg;		
 
         //  List of pending (un)subscriptions, ie. those that were already
         //  applied to the trie, but not yet received by the user.

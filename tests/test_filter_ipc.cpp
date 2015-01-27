@@ -1,5 +1,5 @@
 /*
-    Copyright (c) 2007-2014 Contributors as noted in the AUTHORS file
+    Copyright (c) 2007-2015 Contributors as noted in the AUTHORS file
 
     This file is part of 0MQ.
 
@@ -122,8 +122,8 @@ int main (void)
     // Get the group and supplimental groups of the process owner
     gid_t groups[100];
     int ngroups = getgroups(100, groups);
-    assert (ngroups != -1 && ngroups != 0);
-    gid_t group = getgid(), supgroup = groups[0], notgroup = groups[ngroups - 1] + 1;
+    assert (ngroups != -1);
+    gid_t group = getgid(), supgroup = group, notgroup = group + 1;
     for (int i = 0; i < ngroups; i++) {
         if (supgroup == group && group != groups[i])
             supgroup = groups[i];

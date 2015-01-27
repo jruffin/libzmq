@@ -1,5 +1,5 @@
 /*
-    Copyright (c) 2007-2014 Contributors as noted in the AUTHORS file
+    Copyright (c) 2007-2015 Contributors as noted in the AUTHORS file
 
     This file is part of 0MQ.
 
@@ -27,7 +27,6 @@
 #include "stdint.hpp"
 #include "array.hpp"
 #include "blob.hpp"
-#include "fd.hpp"
 
 namespace zmq
 {
@@ -87,21 +86,23 @@ namespace zmq
         //  Reads a message to the underlying pipe.
         bool read (msg_t *msg_);
 
-        //  Checks whether messages can be written to the pipe. If writing
-        //  the message would cause high watermark the function returns false.
+        //  Checks whether messages can be written to the pipe. If the pipe is
+        //  closed or if writing the message would cause high watermark the
+        //  function returns false.
         bool check_write ();
 
         //  Writes a message to the underlying pipe. Returns false if the
-        //  message cannot be written because high watermark was reached.
+        //  message does not pass check_write. If false, the message object
+        //  retains ownership of its message buffer.
         bool write (msg_t *msg_);
 
         //  Remove unfinished parts of the outbound message from the pipe.
         void rollback ();
 
-        //  Flush the messages downsteam.
+        //  Flush the messages downstream.
         void flush ();
 
-        //  Temporaraily disconnects the inbound message stream and drops
+        //  Temporarily disconnects the inbound message stream and drops
         //  all the messages on the fly. Causes 'hiccuped' event to be generated
         //  in the peer.
         void hiccup ();
@@ -120,8 +121,6 @@ namespace zmq
 
         // check HWM
         bool check_hwm () const;
-        // provide a way to link pipe to engine fd. Set on session initialization
-        fd_t assoc_fd; //=retired_fd
     private:
 
         //  Type of the underlying lock-free pipe.
@@ -181,7 +180,7 @@ namespace zmq
         //  active: common state before any termination begins,
         //  delimiter_received: delimiter was read from pipe before
         //      term command was received,
-        //  waiting_fo_delimiter: term command was already received
+        //  waiting_for_delimiter: term command was already received
         //      from the peer but there are still pending messages to read,
         //  term_ack_sent: all pending messages were already read and
         //      all we are waiting for is ack from the peer,

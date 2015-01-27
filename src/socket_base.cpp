@@ -1,5 +1,5 @@
 /*
-    Copyright (c) 2007-2014 Contributors as noted in the AUTHORS file
+    Copyright (c) 2007-2015 Contributors as noted in the AUTHORS file
 
     This file is part of 0MQ.
 
@@ -143,6 +143,7 @@ zmq::socket_base_t::socket_base_t (ctx_t *parent_, uint32_t tid_, int sid_) :
 {
     options.socket_id = sid_;
     options.ipv6 = (parent_->get (ZMQ_IPV6) != 0);
+    options.linger = parent_->get (ZMQ_BLOCKY)? -1: 0;
 }
 
 zmq::socket_base_t::~socket_base_t ()
@@ -288,11 +289,6 @@ int zmq::socket_base_t::getsockopt (int option_, void *optval_,
         errno = ETERM;
         return -1;
     }
-    
-    //  First, check whether specific socket type overloads the option.
-    int rc = xgetsockopt (option_, optval_, optvallen_);
-    if (rc == 0 || errno != EINVAL)
-        return rc;
 
     if (option_ == ZMQ_RCVMORE) {
         if (*optvallen_ < sizeof (int)) {
@@ -401,7 +397,7 @@ int zmq::socket_base_t::bind (const char *addr_)
         // Save last endpoint URI
         listener->get_address (last_endpoint);
 
-        add_endpoint (addr_, (own_t *) listener, NULL);
+        add_endpoint (last_endpoint.c_str (), (own_t *) listener, NULL);
         return 0;
     }
 
@@ -420,7 +416,7 @@ int zmq::socket_base_t::bind (const char *addr_)
         // Save last endpoint URI
         listener->get_address (last_endpoint);
 
-        add_endpoint (addr_, (own_t *) listener, NULL);
+        add_endpoint (last_endpoint.c_str (), (own_t *) listener, NULL);
         return 0;
     }
 #endif
@@ -505,9 +501,6 @@ int zmq::socket_base_t::connect (const char *addr_)
         int rc = pipepair (parents, new_pipes, hwms, conflates);
         errno_assert (rc == 0);
 
-        //  Attach local end of the pipe to this socket object.
-        attach_pipe (new_pipes [0]);
-
         if (!peer.socket) {
             //  The peer doesn't exist yet so we don't know whether
             //  to send the identity message or not. To resolve this,
@@ -555,6 +548,9 @@ int zmq::socket_base_t::connect (const char *addr_)
             //  increased here.
             send_bind (peer.socket, new_pipes [1], false);
         }
+
+        //  Attach local end of the pipe to this socket object.
+        attach_pipe (new_pipes [0]);
 
         // Save last endpoint URI
         last_endpoint.assign (addr_);
@@ -1062,11 +1058,6 @@ void zmq::socket_base_t::process_destroy ()
 }
 
 int zmq::socket_base_t::xsetsockopt (int, const void *, size_t)
-{
-    errno = EINVAL;
-    return -1;
-}
-int zmq::socket_base_t::xgetsockopt (int, const void *, size_t*)
 {
     errno = EINVAL;
     return -1;

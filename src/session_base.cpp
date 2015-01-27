@@ -1,5 +1,5 @@
 /*
-    Copyright (c) 2007-2014 Contributors as noted in the AUTHORS file
+    Copyright (c) 2007-2015 Contributors as noted in the AUTHORS file
 
     This file is part of 0MQ.
 
@@ -213,14 +213,15 @@ void zmq::session_base_t::pipe_terminated (pipe_t *pipe_)
             cancel_timer (linger_timer_id);
             has_linger_timer = false;
         }
-    } else
+    }
+    else
     if (pipe_ == zap_pipe)
         zap_pipe = NULL;
     else
         // Remove the pipe from the detached pipes set
         terminating_pipes.erase (pipe_);
 
-    if (!is_terminating () && options.raw_sock) {
+    if (!is_terminating () && options.raw_socket) {
         if (engine) {
             engine->terminate ();
             engine = NULL;
@@ -331,6 +332,14 @@ int zmq::session_base_t::zap_connect ()
     return 0;
 }
 
+bool zmq::session_base_t::zap_enabled ()
+{
+    return (
+         options.mechanism != ZMQ_NULL ||
+        (options.mechanism == ZMQ_NULL && options.zap_domain.length() > 0)
+    );
+}
+
 void zmq::session_base_t::process_attach (i_engine *engine_)
 {
     zmq_assert (engine_ != NULL);
@@ -359,9 +368,7 @@ void zmq::session_base_t::process_attach (i_engine *engine_)
         //  Remember the local end of the pipe.
         zmq_assert (!pipe);
         pipe = pipes [0];
-        // Store engine assoc_fd for linking pipe to fd
-        pipe->assoc_fd = engine_->get_assoc_fd ();
-        pipes [1]->assoc_fd = pipe->assoc_fd;
+
         //  Ask socket to plug into the remote end of the pipe.
         send_bind (socket, pipes [1]);
     }

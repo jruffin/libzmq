@@ -1,5 +1,5 @@
 /*
-    Copyright (c) 2007-2014 Contributors as noted in the AUTHORS file
+    Copyright (c) 2007-2015 Contributors as noted in the AUTHORS file
 
     This file is part of 0MQ.
 
@@ -65,7 +65,6 @@ int zmq::pipepair (class object_t *parents_ [2], class pipe_t* pipes_ [2],
 zmq::pipe_t::pipe_t (object_t *parent_, upipe_t *inpipe_, upipe_t *outpipe_,
       int inhwm_, int outhwm_, bool conflate_) :
     object_t (parent_),
-    assoc_fd (retired_fd),
     inpipe (inpipe_),
     outpipe (outpipe_),
     in_active (true),
@@ -388,7 +387,7 @@ void zmq::pipe_t::terminate (bool delay_)
         state = term_ack_sent;
     }
 
-    //  If there are pending messages still availabe, do nothing.
+    //  If there are pending messages still available, do nothing.
     else
     if (state == waiting_for_delimiter) {
     }
