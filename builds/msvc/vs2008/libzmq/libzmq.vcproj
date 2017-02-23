@@ -11,6 +11,9 @@
 		<Platform
 			Name="Win32"
 		/>
+		<Platform
+			Name="IVU i.Box (Display support) (ARMV4I)"
+		/>
 	</Platforms>
 	<ToolFiles>
 	</ToolFiles>
@@ -42,7 +45,7 @@
 				Name="VCCLCompilerTool"
 				AdditionalOptions="-DDLL_EXPORT -DFD_SETSIZE=4096 -DZMQ_USE_SELECT -D_CRT_SECURE_NO_WARNINGS"
 				Optimization="0"
-				PreprocessorDefinitions="NOMINMAX"
+				PreprocessorDefinitions="NOMINMAX;_BIND_TO_CURRENT_VCLIBS_VERSION=1"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="3"
@@ -89,6 +92,88 @@
 			/>
 		</Configuration>
 		<Configuration
+			Name="Debug|IVU i.Box (Display support) (ARMV4I)"
+			OutputDirectory="$(SolutionDir)IVU i.Box (Display support) (ARMV4I)\$(ConfigurationName)"
+			IntermediateDirectory="IVU i.Box (Display support) (ARMV4I)\$(ConfigurationName)"
+			ConfigurationType="2"
+			CharacterSet="1"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+				PreprocessorDefinitions="_WIN32_WCE=$(CEVER);UNDER_CE;$(PLATFORMDEFINES);WINCE;DEBUG;$(ARCHFAM);$(_ARCHFAM_);STANDARDSHELL_UI_MODEL;_DEBUG;DEBUG"
+			/>
+			<Tool
+				Name="VCCLCompilerTool"
+				ExecutionBucket="7"
+				Optimization="0"
+				PreprocessorDefinitions="_WIN32_WCE=$(CEVER);UNDER_CE;$(PLATFORMDEFINES);WINCE;DEBUG;$(ARCHFAM);$(_ARCHFAM_);STANDARDSHELL_UI_MODEL;_DEBUG;ZMQ_USE_SELECT;DLL_EXPORT"
+				StringPooling="true"
+				MinimalRebuild="false"
+				RuntimeLibrary="1"
+				WarningLevel="3"
+				DebugInformationFormat="3"
+			/>
+			<Tool
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+				PreprocessorDefinitions="_WIN32_WCE=$(CEVER);UNDER_CE;$(PLATFORMDEFINES);WINCE;DEBUG;$(ARCHFAM);$(_ARCHFAM_);STANDARDSHELL_UI_MODEL;_DEBUG;DEBUG"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
+			<Tool
+				Name="VCLinkerTool"
+				AdditionalOptions="/subsystem:windowsce,5.00"
+				AdditionalDependencies="ws2.lib"
+				LinkIncremental="1"
+				GenerateDebugInformation="true"
+				StackReserveSize="65536"
+				StackCommitSize="4096"
+				OptimizeReferences="2"
+				EnableCOMDATFolding="2"
+			/>
+			<Tool
+				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCXDCMakeTool"
+			/>
+			<Tool
+				Name="VCBscMakeTool"
+			/>
+			<Tool
+				Name="VCFxCopTool"
+			/>
+			<Tool
+				Name="VCCodeSignTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+			/>
+			<DeploymentTool
+				ForceDirty="-1"
+				RemoteDirectory=""
+				RegisterOutput="0"
+				AdditionalFiles=""
+			/>
+			<DebuggerTool
+			/>
+		</Configuration>
+		<Configuration
 			Name="Release|Win32"
 			OutputDirectory="$(SolutionDir)$(ConfigurationName)"
 			IntermediateDirectory="$(ConfigurationName)"
@@ -117,6 +202,7 @@
 				AdditionalOptions="-DDLL_EXPORT -DFD_SETSIZE=4096 -DZMQ_USE_SELECT -D_CRT_SECURE_NO_WARNINGS"
 				Optimization="2"
 				EnableIntrinsicFunctions="true"
+				PreprocessorDefinitions="_BIND_TO_CURRENT_VCLIBS_VERSION=1"
 				RuntimeLibrary="2"
 				EnableFunctionLevelLinking="true"
 				WarningLevel="3"
@@ -161,6 +247,88 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
+			/>
+		</Configuration>
+		<Configuration
+			Name="Release|IVU i.Box (Display support) (ARMV4I)"
+			OutputDirectory="$(SolutionDir)IVU i.Box (Display support) (ARMV4I)\$(ConfigurationName)"
+			IntermediateDirectory="IVU i.Box (Display support) (ARMV4I)\$(ConfigurationName)"
+			ConfigurationType="2"
+			CharacterSet="1"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+				PreprocessorDefinitions="_WIN32_WCE=$(CEVER);UNDER_CE;$(PLATFORMDEFINES);WINCE;DEBUG;$(ARCHFAM);$(_ARCHFAM_);STANDARDSHELL_UI_MODELNDEBUG"
+			/>
+			<Tool
+				Name="VCCLCompilerTool"
+				ExecutionBucket="7"
+				Optimization="2"
+				FavorSizeOrSpeed="2"
+				PreprocessorDefinitions="_WIN32_WCE=$(CEVER);UNDER_CE;$(PLATFORMDEFINES);WINCE;DEBUG;$(ARCHFAM);$(_ARCHFAM_);STANDARDSHELL_UI_MODELNDEBUG;ZMQ_USE_SELECT;DLL_EXPORT"
+				StringPooling="true"
+				MinimalRebuild="false"
+				WarningLevel="3"
+				DebugInformationFormat="3"
+			/>
+			<Tool
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+				PreprocessorDefinitions="_WIN32_WCE=$(CEVER);UNDER_CE;$(PLATFORMDEFINES);WINCE;DEBUG;$(ARCHFAM);$(_ARCHFAM_);STANDARDSHELL_UI_MODELNDEBUG"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
+			<Tool
+				Name="VCLinkerTool"
+				AdditionalOptions="/subsystem:windowsce,5.00"
+				AdditionalDependencies="ws2.lib"
+				LinkIncremental="1"
+				GenerateDebugInformation="true"
+				StackReserveSize="65536"
+				StackCommitSize="4096"
+				OptimizeReferences="2"
+				EnableCOMDATFolding="2"
+			/>
+			<Tool
+				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCXDCMakeTool"
+			/>
+			<Tool
+				Name="VCBscMakeTool"
+			/>
+			<Tool
+				Name="VCFxCopTool"
+			/>
+			<Tool
+				Name="VCCodeSignTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+			/>
+			<DeploymentTool
+				ForceDirty="-1"
+				RemoteDirectory=""
+				RegisterOutput="0"
+				AdditionalFiles=""
+			/>
+			<DebuggerTool
 			/>
 		</Configuration>
 		<Configuration
@@ -229,6 +397,81 @@
 			/>
 		</Configuration>
 		<Configuration
+			Name="StaticDebug|IVU i.Box (Display support) (ARMV4I)"
+			OutputDirectory="$(SolutionDir)IVU i.Box (Display support) (ARMV4I)\$(ConfigurationName)"
+			IntermediateDirectory="IVU i.Box (Display support) (ARMV4I)\$(ConfigurationName)"
+			ConfigurationType="4"
+			CharacterSet="1"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+				PreprocessorDefinitions="_WIN32_WCE=$(CEVER);UNDER_CE;$(PLATFORMDEFINES);WINCE;DEBUG;$(ARCHFAM);$(_ARCHFAM_);STANDARDSHELL_UI_MODELNDEBUG"
+			/>
+			<Tool
+				Name="VCCLCompilerTool"
+				ExecutionBucket="7"
+				Optimization="2"
+				FavorSizeOrSpeed="2"
+				PreprocessorDefinitions="_WIN32_WCE=$(CEVER);UNDER_CE;$(PLATFORMDEFINES);WINCE;DEBUG;$(ARCHFAM);$(_ARCHFAM_);STANDARDSHELL_UI_MODELNDEBUG;ZMQ_USE_SELECT;ZMQ_STATIC"
+				MinimalRebuild="false"
+				RuntimeLibrary="1"
+				WarningLevel="3"
+				DebugInformationFormat="3"
+			/>
+			<Tool
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+				PreprocessorDefinitions="_WIN32_WCE=$(CEVER);UNDER_CE;$(PLATFORMDEFINES);WINCE;DEBUG;$(ARCHFAM);$(_ARCHFAM_);STANDARDSHELL_UI_MODELNDEBUG"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
+			<Tool
+				Name="VCLibrarianTool"
+				AdditionalOptions=" /SUBSYSTEM:WINDOWSCE,$(CEVER) /MACHINE:$(ARCHFAM)"
+			/>
+			<Tool
+				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCXDCMakeTool"
+			/>
+			<Tool
+				Name="VCBscMakeTool"
+			/>
+			<Tool
+				Name="VCFxCopTool"
+			/>
+			<Tool
+				Name="VCCodeSignTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+			/>
+			<DeploymentTool
+				ForceDirty="-1"
+				RemoteDirectory=""
+				RegisterOutput="0"
+				AdditionalFiles=""
+			/>
+			<DebuggerTool
+			/>
+		</Configuration>
+		<Configuration
 			Name="StaticRelease|Win32"
 			OutputDirectory="$(SolutionDir)$(ConfigurationName)"
 			IntermediateDirectory="$(ConfigurationName)"
@@ -291,6 +534,80 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
+			/>
+		</Configuration>
+		<Configuration
+			Name="StaticRelease|IVU i.Box (Display support) (ARMV4I)"
+			OutputDirectory="$(SolutionDir)IVU i.Box (Display support) (ARMV4I)\$(ConfigurationName)"
+			IntermediateDirectory="IVU i.Box (Display support) (ARMV4I)\$(ConfigurationName)"
+			ConfigurationType="4"
+			CharacterSet="1"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+				PreprocessorDefinitions="_WIN32_WCE=$(CEVER);UNDER_CE;$(PLATFORMDEFINES);WINCE;DEBUG;$(ARCHFAM);$(_ARCHFAM_);STANDARDSHELL_UI_MODELNDEBUG"
+			/>
+			<Tool
+				Name="VCCLCompilerTool"
+				ExecutionBucket="7"
+				Optimization="2"
+				FavorSizeOrSpeed="2"
+				PreprocessorDefinitions="_WIN32_WCE=$(CEVER);UNDER_CE;$(PLATFORMDEFINES);WINCE;DEBUG;$(ARCHFAM);$(_ARCHFAM_);STANDARDSHELL_UI_MODELNDEBUG;ZMQ_USE_SELECT;ZMQ_STATIC"
+				MinimalRebuild="false"
+				WarningLevel="3"
+				DebugInformationFormat="3"
+			/>
+			<Tool
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+				PreprocessorDefinitions="_WIN32_WCE=$(CEVER);UNDER_CE;$(PLATFORMDEFINES);WINCE;DEBUG;$(ARCHFAM);$(_ARCHFAM_);STANDARDSHELL_UI_MODELNDEBUG"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
+			<Tool
+				Name="VCLibrarianTool"
+				AdditionalOptions=" /SUBSYSTEM:WINDOWSCE,$(CEVER) /MACHINE:$(ARCHFAM)"
+			/>
+			<Tool
+				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCXDCMakeTool"
+			/>
+			<Tool
+				Name="VCBscMakeTool"
+			/>
+			<Tool
+				Name="VCFxCopTool"
+			/>
+			<Tool
+				Name="VCCodeSignTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+			/>
+			<DeploymentTool
+				ForceDirty="-1"
+				RemoteDirectory=""
+				RegisterOutput="0"
+				AdditionalFiles=""
+			/>
+			<DebuggerTool
 			/>
 		</Configuration>
 		<Configuration
@@ -369,6 +686,86 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
+			/>
+		</Configuration>
+		<Configuration
+			Name="WithOpenPGM|IVU i.Box (Display support) (ARMV4I)"
+			OutputDirectory="$(SolutionDir)IVU i.Box (Display support) (ARMV4I)\$(ConfigurationName)"
+			IntermediateDirectory="IVU i.Box (Display support) (ARMV4I)\$(ConfigurationName)"
+			ConfigurationType="1"
+			CharacterSet="1"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+				PreprocessorDefinitions="_WIN32_WCE=$(CEVER);UNDER_CE;$(PLATFORMDEFINES);WINCE;DEBUG;$(ARCHFAM);$(_ARCHFAM_);STANDARDSHELL_UI_MODELNDEBUG"
+			/>
+			<Tool
+				Name="VCCLCompilerTool"
+				ExecutionBucket="7"
+				Optimization="2"
+				FavorSizeOrSpeed="2"
+				PreprocessorDefinitions="_WIN32_WCE=$(CEVER);UNDER_CE;$(PLATFORMDEFINES);WINCE;DEBUG;$(ARCHFAM);$(_ARCHFAM_);STANDARDSHELL_UI_MODELNDEBUG"
+				MinimalRebuild="false"
+				WarningLevel="3"
+				DebugInformationFormat="3"
+			/>
+			<Tool
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+				PreprocessorDefinitions="_WIN32_WCE=$(CEVER);UNDER_CE;$(PLATFORMDEFINES);WINCE;DEBUG;$(ARCHFAM);$(_ARCHFAM_);STANDARDSHELL_UI_MODELNDEBUG"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
+			<Tool
+				Name="VCLinkerTool"
+				AdditionalOptions="/subsystem:windowsce,$(CEVER) /machine:$(ARCHFAM)"
+				LinkIncremental="1"
+				GenerateDebugInformation="true"
+				StackReserveSize="65536"
+				StackCommitSize="4096"
+				OptimizeReferences="2"
+				EnableCOMDATFolding="2"
+			/>
+			<Tool
+				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCXDCMakeTool"
+			/>
+			<Tool
+				Name="VCBscMakeTool"
+			/>
+			<Tool
+				Name="VCFxCopTool"
+			/>
+			<Tool
+				Name="VCCodeSignTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+			/>
+			<DeploymentTool
+				ForceDirty="-1"
+				RemoteDirectory=""
+				RegisterOutput="0"
+				AdditionalFiles=""
+			/>
+			<DebuggerTool
 			/>
 		</Configuration>
 	</Configurations>
